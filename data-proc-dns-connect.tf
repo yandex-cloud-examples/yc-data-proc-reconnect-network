@@ -1,4 +1,4 @@
-# Infrastructure for Yandex Data Proc cluster with DNS for the master host FQDN
+# Infrastructure for the Yandex Data Processing cluster with DNS for the master host FQDN
 #
 # RU: https://cloud.yandex.ru/docs/data-proc/tutorials/reconnect-network
 # EN: https://cloud.yandex.com/en-ru/docs/data-proc/tutorials/reconnect-network
@@ -7,16 +7,16 @@
 # Specify the following settings:
 locals {
   folder_id              = "" # Your cloud folder ID, same as for provider
-  path_to_ssh_public_key = "" # Absolute path to the SSH public key for the Data Proc cluster
+  path_to_ssh_public_key = "" # Absolute path to the SSH public key for the Yandex Data Processing cluster
   bucket                 = "" # Name of an Object Storage bucket for input files. Must be unique in the Cloud.
 
   # Specify these settings ONLY AFTER the cluster is created. Then run "terraform apply" command again
-  # You should set up the Data Proc master node FQDN using the GUI/CLI/API to obtain the FQDN
-  dataproc_fqdn = "test" # Substitute "test" with the Data Proc cluster master node FQDN
+  # You should set up the Yandex Data Processing master node FQDN using the GUI/CLI/API to obtain the FQDN
+  dataproc_fqdn = "test" # Substitute "test" with the Yandex Data Processing cluster master node FQDN
 }
 
 resource "yandex_vpc_network" "data-proc-network" {
-  description = "Network for the Data Proc cluster"
+  description = "Network for the Yandex Data Processing cluster"
   name        = "data-proc-network"
 }
 
@@ -37,7 +37,7 @@ resource "yandex_vpc_route_table" "route-table-nat" {
 }
 
 resource "yandex_vpc_subnet" "data-proc-subnet" {
-  description    = "Subnet for the Data Proc cluster"
+  description    = "Subnet for the Yandex Data Processing cluster"
   name           = "data-proc-subnet"
   network_id     = yandex_vpc_network.data-proc-network.id
   v4_cidr_blocks = ["192.168.1.0/24"]
@@ -113,7 +113,7 @@ resource "yandex_storage_bucket" "obj-storage-bucket" {
 }
 
 resource "yandex_dataproc_cluster" "dataproc-cluster" {
-  description        = "Yandex Data Proc cluster"
+  description        = "Yandex Data Processing cluster"
   name               = "dataproc-cluster"
   service_account_id = yandex_iam_service_account.dataproc-sa-user.id
   zone_id            = "ru-central1-a"
@@ -161,13 +161,13 @@ resource "yandex_dataproc_cluster" "dataproc-cluster" {
 
 resource "yandex_dns_zone" "data-proc-zone" {
   name             = "dp-private-zone"
-  description      = "Data Proc DNS zone"
+  description      = "Yandex Data Processing DNS zone"
   zone             = "data-proc-test-user.org."
   public           = false
   private_networks = [yandex_vpc_network.data-proc-network.id]
 }
 
-# DNS record for the Data Proc cluster master node FQDN
+# DNS record for the Yandex Data Processing cluster master node FQDN
 resource "yandex_dns_recordset" "data-proc-record" {
   zone_id = yandex_dns_zone.data-proc-zone.id
   name    = "data-proc-test-user.org."
