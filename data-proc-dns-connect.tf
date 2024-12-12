@@ -8,6 +8,7 @@
 locals {
   folder_id              = "" # Your cloud folder ID, same as for provider
   path_to_ssh_public_key = "" # Absolute path to the SSH public key for the Yandex Data Processing cluster
+  os_sa_name             = "" # Name of the service account for Object Storage creating
   bucket                 = "" # Name of an Object Storage bucket for input files. Must be unique in the Cloud.
 
   # Specify these settings ONLY AFTER the cluster is created. Then run "terraform apply" command again
@@ -58,7 +59,7 @@ resource "yandex_vpc_security_group" "data-proc-security-group" {
   }
 
   ingress {
-    description       = "Allow any traffic within the security group"
+    description       = "Allow any incoming traffic within the security group"
     protocol          = "ANY"
     from_port         = 0
     to_port           = 65535
@@ -66,27 +67,28 @@ resource "yandex_vpc_security_group" "data-proc-security-group" {
   }
 
   egress {
-    description       = "Allow any traffic within the security group"
+    description       = "Allow any outgoing traffic within the security group"
     protocol          = "ANY"
     from_port         = 0
     to_port           = 65535
     predefined_target = "self_security_group"
   }
+
+  egress {
+    description    = "Allow access to NTP servers for time syncing"
+    protocol       = "UDP"
+    port           = 123
+    v4_cidr_blocks = ["0.0.0.0/0"]
+  }
 }
 
-# Create a service account
+# Create a service account for Data Processing cluster
 resource "yandex_iam_service_account" "dataproc-sa-user" {
   folder_id = local.folder_id
   name      = "data-proc-sa-user"
 }
 
 # Grant permissions to the service account
-resource "yandex_resourcemanager_folder_iam_member" "sa-editor" {
-  folder_id = local.folder_id
-  role      = "storage.editor"
-  member    = "serviceAccount:${yandex_iam_service_account.dataproc-sa-user.id}"
-}
-
 resource "yandex_resourcemanager_folder_iam_member" "dataproc-sa-role-dataproc-agent" {
   folder_id = local.folder_id
   role      = "dataproc.agent"
@@ -99,10 +101,23 @@ resource "yandex_resourcemanager_folder_iam_member" "dataproc-sa-role-dataproc-p
   member    = "serviceAccount:${yandex_iam_service_account.dataproc-sa-user.id}"
 }
 
+# Create a service account for managing Object Storage bucket
+resource "yandex_iam_service_account" "obj-storage-sa-user" {
+  folder_id = local.folder_id
+  name      = local.os_sa_name
+}
+
+# Grant storage.admin permission to the service account
+resource "yandex_resourcemanager_folder_iam_member" "sa-admin" {
+  folder_id = local.folder_id
+  role      = "storage.admin"
+  member    = "serviceAccount:${yandex_iam_service_account.obj-storage-sa-user.id}"
+}
+
 # Create an access key for the service account
 resource "yandex_iam_service_account_static_access_key" "sa-static-key" {
   description        = "Static access key for Object Storage"
-  service_account_id = yandex_iam_service_account.dataproc-sa-user.id
+  service_account_id = yandex_iam_service_account.obj-storage-sa-user.id
 }
 
 # Use keys to create a bucket
@@ -110,6 +125,16 @@ resource "yandex_storage_bucket" "obj-storage-bucket" {
   access_key = yandex_iam_service_account_static_access_key.sa-static-key.access_key
   secret_key = yandex_iam_service_account_static_access_key.sa-static-key.secret_key
   bucket     = local.bucket
+
+  depends_on = [
+    yandex_resourcemanager_folder_iam_member.sa-admin
+  ]
+
+  grant {
+    id          = yandex_iam_service_account.dataproc-sa-user.id
+    type        = "CanonicalUser"
+    permissions = ["READ","WRITE"]
+  }
 }
 
 resource "yandex_dataproc_cluster" "dataproc-cluster" {
@@ -118,6 +143,10 @@ resource "yandex_dataproc_cluster" "dataproc-cluster" {
   service_account_id = yandex_iam_service_account.dataproc-sa-user.id
   zone_id            = "ru-central1-a"
   bucket             = local.bucket
+  depends_on         = [
+    yandex_resourcemanager_folder_iam_member.dataproc-sa-role-dataproc-agent,
+    yandex_resourcemanager_folder_iam_member.dataproc-sa-role-dataproc-provisioner
+  ]
 
   security_group_ids = [
     yandex_vpc_security_group.data-proc-security-group.id
@@ -127,7 +156,7 @@ resource "yandex_dataproc_cluster" "dataproc-cluster" {
     hadoop {
       services = ["HDFS", "YARN", "SPARK", "TEZ", "MAPREDUCE", "HIVE"]
       ssh_public_keys = [
-        file(local.path_to_ssh_public_key)
+        "${file(local.path_to_ssh_public_key)}"
       ]
     }
 
