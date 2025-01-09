@@ -8,7 +8,7 @@
 locals {
   folder_id              = "" # Your cloud folder ID, same as for provider
   path_to_ssh_public_key = "" # Absolute path to the SSH public key for the Yandex Data Processing cluster
-  os_sa_name             = "" # Name of the service account for Object Storage creating
+  os_sa_name             = "" # Name of the service account for managing Object Storage bucket and bucket's ACLs
   bucket                 = "" # Name of an Object Storage bucket for input files. Must be unique in the Cloud.
 
   # Specify these settings ONLY AFTER the cluster is created. Then run "terraform apply" command again
