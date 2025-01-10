@@ -156,7 +156,7 @@ resource "yandex_dataproc_cluster" "dataproc-cluster" {
     hadoop {
       services = ["HDFS", "YARN", "SPARK", "TEZ", "MAPREDUCE", "HIVE"]
       ssh_public_keys = [
-        "${file(local.path_to_ssh_public_key)}"
+        file(local.path_to_ssh_public_key)
       ]
     }
 
