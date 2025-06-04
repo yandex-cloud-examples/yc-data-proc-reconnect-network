@@ -1,0 +1,3 @@
+# Reconfiguring a network connection when recreating a Yandex Data Processing cluster
+
+You may need to recreate a [Yandex Data Processing](https://yandex.cloud/en/docs/data-proc) cluster to install software updates, balance the load across clusters, migrate clusters from one availability zone to another, or perform other operations. Set up DNS to quickly switch your network traffic over to FQDNs of hosts in the new cluster. See [this tutorial](https://yandex.cloud/en/docs/data-proc/tutorials/reconnect-network) to learn how to set up the network infrastructure, along with the one for Yandex Data Processing, through Terraform. This repository contains the configuration file you will need: [data-proc-dns-connect.tf](data-proc-dns-connect.tf).
