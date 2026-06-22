@@ -131,6 +131,7 @@ resource "yandex_storage_bucket" "obj-storage-bucket" {
   ]
 }
 
+# Grant permissions to the service account in order to read from the bucket and write to it
 resource "yandex_storage_bucket_grant" "obj-storage-bucket-grant" {
   bucket     = yandex_storage_bucket.obj-storage-bucket.bucket
   access_key = yandex_iam_service_account_static_access_key.sa-static-key.access_key
