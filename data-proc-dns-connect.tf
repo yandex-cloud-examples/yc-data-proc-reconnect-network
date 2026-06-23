@@ -129,7 +129,13 @@ resource "yandex_storage_bucket" "obj-storage-bucket" {
   depends_on = [
     yandex_resourcemanager_folder_iam_member.sa-admin
   ]
+}
 
+# Grant permissions to the service account in order to read from the bucket and write to it
+resource "yandex_storage_bucket_grant" "obj-storage-bucket-grant" {
+  bucket     = yandex_storage_bucket.obj-storage-bucket.bucket
+  access_key = yandex_iam_service_account_static_access_key.sa-static-key.access_key
+  secret_key = yandex_iam_service_account_static_access_key.sa-static-key.secret_key
   grant {
     id          = yandex_iam_service_account.dataproc-sa-user.id
     type        = "CanonicalUser"
